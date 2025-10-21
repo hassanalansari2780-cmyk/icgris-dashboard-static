@@ -1,136 +1,70 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ICGRIS Dashboard</title>
-  <!-- Tailwind via CDN (no build step) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <meta name="description" content="Contracts • Claims • Change Orders • Payments" />
-</head>
-<body class="min-h-screen bg-white text-gray-900">
-  <main class="container mx-auto max-w-7xl px-4 py-8 space-y-8">
-    <!-- Header -->
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-semibold">ICGRIS Dashboard</h1>
-        <p class="text-sm text-gray-500">Contracts • Claims • Change Orders • Payments</p>
+<script>
+  // --- Data (replace with your live data later) ---
+  const PACKAGES = [
+    { key: "A",   title: "Package A",   status: "On Track" },
+    { key: "B",   title: "Package B",   status: "On Track" },
+    { key: "C",   title: "Package C",   status: "Attention" },
+    { key: "D",   title: "Package D",   status: "On Track" },
+    { key: "F",   title: "Package F",   status: "On Track" },
+    { key: "G",   title: "Package G",   status: "Risk" },
+    { key: "I2",  title: "Package I2",  status: "Attention" },
+    { key: "PMEC",title: "PMEC",        status: "On Track" },
+  ];
+
+  const rows = [
+    { pkg: "A", status: "On Track",  claims: 1, cos: 2, paidPct: 42, valueUsd: 1200000 },
+    { pkg: "B", status: "On Track",  claims: 0, cos: 1, paidPct: 38, valueUsd:  900000 },
+    { pkg: "C", status: "Attention", claims: 3, cos: 2, paidPct: 25, valueUsd: 2100000 },
+    { pkg: "D", status: "On Track",  claims: 1, cos: 0, paidPct: 31, valueUsd:  750000 },
+    { pkg: "F", status: "On Track",  claims: 0, cos: 1, paidPct: 60, valueUsd: 1800000 },
+    { pkg: "G", status: "Risk",      claims: 5, cos: 4, paidPct: 18, valueUsd: 3200000 },
+    { pkg: "I2",status: "Attention", claims: 2, cos: 1, paidPct: 22, valueUsd: 1100000 },
+    { pkg: "PMEC",status:"On Track", claims: 0, cos: 0, paidPct: 80, valueUsd:       0 },
+  ];
+
+  // --- Render Cards ---
+  const badgeClass = (s) =>
+    "inline-flex items-center rounded-full border px-2 py-0.5 text-xs " +
+    (s === "On Track" ? "border-green-200 text-green-700" :
+     s === "Attention" ? "border-amber-200 text-amber-700" :
+     "border-red-200 text-red-700");
+
+  const cards = document.getElementById("cards");
+  cards.innerHTML = PACKAGES.map(p => `
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-gray-100 p-4">
+        <div class="font-medium">${p.title}</div>
+        <span class="${badgeClass(p.status)}">${p.status}</span>
       </div>
-      <div class="flex gap-2">
-        <button id="exportCsv" class="rounded-2xl border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50">
-          Export CSV
-        </button>
-        <button id="exportSheets" class="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white hover:opacity-90">
-          Export to Google Sheets
-        </button>
-      </div>
-    </header>
-
-    <!-- Package Cards -->
-    <section id="cards" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"></section>
-
-    <!-- Table -->
-    <section class="space-y-3">
-      <h2 class="text-lg font-semibold">All Packages (table)</h2>
-      <div class="overflow-auto rounded-2xl border border-gray-200">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50 text-left">
-            <tr>
-              <th class="px-4 py-3">Package</th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3">Claims</th>
-              <th class="px-4 py-3">COs</th>
-              <th class="px-4 py-3">Paid %</th>
-              <th class="px-4 py-3">Value (USD)</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    // --- Data (replace with your live data source later) ---
-    const PACKAGES = [
-      { key: "A",   title: "Package A",   status: "On Track" },
-      { key: "B",   title: "Package B",   status: "On Track" },
-      { key: "C",   title: "Package C",   status: "Attention" },
-      { key: "D",   title: "Package D",   status: "On Track" },
-      { key: "F",   title: "Package F",   status: "On Track" },
-      { key: "G",   title: "Package G",   status: "Risk" },
-      { key: "I2",  title: "Package I2",  status: "Attention" },
-      { key: "PMEC",title: "PMEC",        status: "On Track" },
-    ];
-
-    const rows = [
-      { pkg: "A", status: "On Track",  claims: 1, cos: 2, paidPct: 42, valueUsd: 1200000 },
-      { pkg: "B", status: "On Track",  claims: 0, cos: 1, paidPct: 38, valueUsd:  900000 },
-      { pkg: "C", status: "Attention", claims: 3, cos: 2, paidPct: 25, valueUsd: 2100000 },
-      { pkg: "D", status: "On Track",  claims: 1, cos: 0, paidPct: 31, valueUsd:  750000 },
-      { pkg: "F", status: "On Track",  claims: 0, cos: 1, paidPct: 60, valueUsd: 1800000 },
-      { pkg: "G", status: "Risk",      claims: 5, cos: 4, paidPct: 18, valueUsd: 3200000 },
-      { pkg: "I2",status: "Attention", claims: 2, cos: 1, paidPct: 22, valueUsd: 1100000 },
-      { pkg: "PMEC",status:"On Track", claims: 0, cos: 0, paidPct: 80, valueUsd:       0 },
-    ];
-
-    // --- Render Cards ---
-    const badgeClass = (s) =>
-      "inline-flex items-center rounded-full border px-2 py-0.5 text-xs " +
-      (s === "On Track" ? "border-green-200 text-green-700" :
-       s === "Attention" ? "border-amber-200 text-amber-700" :
-       "border-red-200 text-red-700");
-
-    const cards = document.getElementById("cards");
-    cards.innerHTML = PACKAGES.map(p => \`
-      <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-gray-100 p-4">
-          <div class="font-medium">\${p.title}</div>
-          <span class="\${badgeClass(p.status)}">\${p.status}</span>
-        </div>
-        <div class="space-y-3 p-4">
-          <div class="text-sm text-gray-500">Quick Actions</div>
-          <div class="flex flex-wrap gap-2">
-            <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
-              onclick="alert('Open \${p.key} claims')">Claims</button>
-            <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
-              onclick="alert('Open \${p.key} COs')">COs</button>
-            <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
-              onclick="alert('Open \${p.key} payments')">Payments</button>
-          </div>
+      <div class="space-y-3 p-4">
+        <div class="text-sm text-gray-500">Quick Actions</div>
+        <div class="flex flex-wrap gap-2">
+          <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+            onclick="alert('Open ${p.key} claims')">Claims</button>
+          <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+            onclick="alert('Open ${p.key} COs')">COs</button>
+          <button class="rounded-2xl border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+            onclick="alert('Open ${p.key} payments')">Payments</button>
         </div>
       </div>
-    \`).join("");
+    </div>
+  `).join("");
 
-    // --- Render Table ---
-    const rowsEl = document.getElementById("rows");
-    rowsEl.innerHTML = rows.map(r => \`
-      <tr class="border-t">
-        <td class="px-4 py-3 font-medium">\${r.pkg}</td>
-        <td class="px-4 py-3">\${r.status}</td>
-        <td class="px-4 py-3">\${r.claims}</td>
-        <td class="px-4 py-3">\${r.cos}</td>
-        <td class="px-4 py-3">\${r.paidPct}%</td>
-        <td class="px-4 py-3">$\${r.valueUsd.toLocaleString()}</td>
-      </tr>
-    \`).join("");
+  // --- Render Table ---
+  const rowsEl = document.getElementById("rows");
+  rowsEl.innerHTML = rows.map(r => `
+    <tr class="border-t">
+      <td class="px-4 py-3 font-medium">${r.pkg}</td>
+      <td class="px-4 py-3">${r.status}</td>
+      <td class="px-4 py-3">${r.claims}</td>
+      <td class="px-4 py-3">${r.cos}</td>
+      <td class="px-4 py-3">${r.paidPct}%</td>
+      <td class="px-4 py-3">$${r.valueUsd.toLocaleString()}</td>
+    </tr>
+  `).join("");
 
-    // --- Export CSV ---
-    document.getElementById("exportCsv").onclick = () => {
-      const headers = ["Package","Status","Claims","COs","Paid %","Value (USD)"];
-      const data = rows.map(r => [r.pkg, r.status, r.claims, r.cos, r.paidPct, r.valueUsd]);
-      const csv = [headers, ...data].map(line => line.join(",")).join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "icgris-dashboard.csv"; a.click();
-      URL.revokeObjectURL(url);
-    };
+  // --- Export CSV ---
+  document.getElementById("exportCsv").onclick = () => {
+    const headers = ["Package","Status","Claims","COs","Paid %","Value (USD)"];
+    const data = rows.ma
 
-    // --- Placeholder for Google Sheets (enable later) ---
-    document.getElementById("exportSheets").onclick = () => {
-      alert("Coming soon: direct Google Sheets export (browser-only OAuth).");
-    };
-  </script>
-</body>
-</html>
