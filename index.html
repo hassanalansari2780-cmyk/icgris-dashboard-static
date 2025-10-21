@@ -50,31 +50,51 @@
     </section>
   </main>
 
-  <script>
-    // --- Data (replace with your live data later) ---
-    const PACKAGES = [
-      { key: "A",   title: "Package A",   status: "On Track" },
-      { key: "B",   title: "Package B",   status: "On Track" },
-      { key: "C",   title: "Package C",   status: "Attention" },
-      { key: "D",   title: "Package D",   status: "On Track" },
-      { key: "F",   title: "Package F",   status: "On Track" },
-      { key: "G",   title: "Package G",   status: "Risk" },
-      { key: "I2",  title: "Package I2",  status: "Attention" },
-      { key: "PMEC",title: "PMEC",        status: "On Track" },
-    ];
+<script>
+  /* ====== EDIT THESE LINES ====== */
+  const GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com"; // from Google Cloud → OAuth client
+  const SPREADSHEET_ID   = "YOUR_SHEET_ID"; // from Sheet URL between /d/ and /edit
+  const SHEET_NAME       = "ICGRIS"; // or "Sheet1" if you didn't rename the tab
+  /* ============================== */
 
-    const rows = [
-      { pkg: "A", status: "On Track",  claims: 1, cos: 2, paidPct: 42, valueUsd: 1200000 },
-      { pkg: "B", status: "On Track",  claims: 0, cos: 1, paidPct: 38, valueUsd:  900000 },
-      { pkg: "C", status: "Attention", claims: 3, cos: 2, paidPct: 25, valueUsd: 2100000 },
-      { pkg: "D", status: "On Track",  claims: 1, cos: 0, paidPct: 31, valueUsd:  750000 },
-      { pkg: "F", status: "On Track",  claims: 0, cos: 1, paidPct: 60, valueUsd: 1800000 },
-      { pkg: "G", status: "Risk",      claims: 5, cos: 4, paidPct: 18, valueUsd: 3200000 },
-      { pkg: "I2",status: "Attention", claims: 2, cos: 1, paidPct: 22, valueUsd: 1100000 },
-      { pkg: "PMEC",status:"On Track", claims: 0, cos: 0, paidPct: 80, valueUsd:       0 },
-    ];
+  // Load Google Identity Services for OAuth
+  function loadGis() {
+    return new Promise((resolve, reject) => {
+      if (window.google && window.google.accounts) return resolve();
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
 
-    // --- Render Cards ---
+  // --- Data (same as your current page; edit as needed) ---
+  const PACKAGES = [
+    { key: "A",   title: "Package A",   status: "On Track" },
+    { key: "B",   title: "Package B",   status: "On Track" },
+    { key: "C",   title: "Package C",   status: "Attention" },
+    { key: "D",   title: "Package D",   status: "On Track" },
+    { key: "F",   title: "Package F",   status: "On Track" },
+    { key: "G",   title: "Package G",   status: "Risk" },
+    { key: "I2",  title: "Package I2",  status: "Attention" },
+    { key: "PMEC",title: "PMEC",        status: "On Track" },
+  ];
+
+  const rows = [
+    { pkg: "A", status: "On Track",  claims: 1, cos: 2, paidPct: 42, valueUsd: 1200000 },
+    { pkg: "B", status: "On Track",  claims: 0, cos: 1, paidPct: 38, valueUsd:  900000 },
+    { pkg: "C", status: "Attention", claims: 3, cos: 2, paidPct: 25, valueUsd: 2100000 },
+    { pkg: "D", status: "On Track",  claims: 1, cos: 0, paidPct: 31, valueUsd:  750000 },
+    { pkg: "F", status: "On Track",  claims: 0, cos: 1, paidPct: 60, valueUsd: 1800000 },
+    { pkg: "G", status: "Risk",      claims: 5, cos: 4, paidPct: 18, valueUsd: 3200000 },
+    { pkg: "I2",status: "Attention", claims: 2, cos: 1, paidPct: 22, valueUsd: 1100000 },
+    { pkg: "PMEC",status:"On Track", claims: 0, cos: 0, paidPct: 80, valueUsd:       0 },
+  ];
+
+  // ---- Render UI when DOM is ready ----
+  document.addEventListener("DOMContentLoaded", () => {
     const badgeClass = (s) =>
       "inline-flex items-center rounded-full border px-2 py-0.5 text-xs " +
       (s === "On Track" ? "border-green-200 text-green-700" :
@@ -102,7 +122,6 @@
       </div>
     `).join("");
 
-    // --- Render Table ---
     const rowsEl = document.getElementById("rows");
     rowsEl.innerHTML = rows.map(r => `
       <tr class="border-t">
@@ -115,7 +134,7 @@
       </tr>
     `).join("");
 
-    // --- Export CSV ---
+    // CSV export (unchanged)
     document.getElementById("exportCsv").onclick = () => {
       const headers = ["Package","Status","Claims","COs","Paid %","Value (USD)"];
       const data = rows.map(r => [r.pkg, r.status, r.claims, r.cos, r.paidPct, r.valueUsd]);
@@ -127,10 +146,51 @@
       URL.revokeObjectURL(url);
     };
 
-    // --- Placeholder for Google Sheets (enable later) ---
-    document.getElementById("exportSheets").onclick = () => {
-      alert("Coming soon: direct Google Sheets export (browser-only OAuth).");
+    // Google Sheets export (OAuth popup + append)
+    document.getElementById("exportSheets").onclick = async () => {
+      try {
+        await loadGis();
+
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "https://www.googleapis.com/auth/spreadsheets",
+          callback: async (resp) => {
+            const accessToken = resp.access_token;
+
+            const values = [
+              ["Package","Status","Claims","COs","Paid %","Value (USD)"],
+              ...rows.map(r => [r.pkg, r.status, r.claims, r.cos, r.paidPct, r.valueUsd])
+            ];
+
+            const range = encodeURIComponent(`${SHEET_NAME}!A1`);
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED`;
+
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ majorDimension: "ROWS", values })
+            });
+
+            if (!res.ok) {
+              const err = await res.text();
+              alert("Sheets API error:\n" + err);
+            } else {
+              alert("Exported to Google Sheet!");
+            }
+          },
+        });
+
+        tokenClient.requestAccessToken(); // opens Google popup
+      } catch (e) {
+        console.error(e);
+        alert("Could not start Google sign-in. Check Client ID & origin.");
+      }
     };
-  </script>
+  });
+</script>
+
 </body>
 </html>
